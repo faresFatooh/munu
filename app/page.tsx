@@ -12,7 +12,9 @@ import { Loader2 } from "lucide-react"
 
 export default function MenuPage() {
   const [isMounted, setIsMounted] = useState(false)
-  const { categories, menuItems, settings, loading } = useMenuData()
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  
+  const { categories = [], menuItems = [], settings = {}, loading } = useMenuData()
   const cart = useSavedItems()
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function MenuPage() {
   }, [])
 
   const activeCategories = useMemo(() => 
-    (categories || []).filter((cat) => cat.isActive), 
+    categories.filter((cat) => cat.isActive), 
   [categories])
 
   if (!isMounted || loading) {
@@ -31,25 +33,26 @@ export default function MenuPage() {
     )
   }
 
-  const finalTotal = cart.totalPrice + (cart.totalPrice * (settings?.serviceCharge || 0)) / 100
+  const serviceCharge = settings?.serviceCharge || 0
+  const finalTotal = cart.totalPrice + (cart.totalPrice * serviceCharge) / 100
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white" dir="rtl">
       <MenuHeader settings={settings} />
 
-      <div className="sticky top-0 z-40 bg-[#0d0d0d]/95 backdrop-blur-xl border-b border-amber-500/10">
+      <div className="sticky top-0 z-40 bg-[#0d0d0d]/95 backdrop-blur-xl border-b border-white/5">
         <CategoryTabs
           categories={activeCategories}
-          selectedCategory="" // يمكن إضافة logic التحديد هنا
+          selectedCategory=""
           onSelectCategory={(id) => {
-             document.getElementById(`category-${id}`)?.scrollIntoView({ behavior: "smooth" })
+            document.getElementById(`category-${id}`)?.scrollIntoView({ behavior: "smooth" })
           }}
         />
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-8 pb-32">
         {activeCategories.map((category) => {
-          const categoryItems = (menuItems || []).filter(
+          const categoryItems = menuItems.filter(
             (item) => item.categoryId === category.id && item.isAvailable
           )
           if (categoryItems.length === 0) return null
@@ -73,15 +76,14 @@ export default function MenuPage() {
         />
       )}
 
-      {/* تأكد من تعريف setIsCartOpen و isCartOpen في المكون أو استخدامهما مباشرة */}
       <SavedItemsSheet
-        isOpen={false} // استبدلها بـ State
-        onClose={() => {}} 
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
         savedItems={cart.savedItems}
         onRemove={cart.removeItem}
         onUpdateQuantity={cart.updateQuantity}
         onClearAll={cart.clearAll}
-        serviceCharge={settings?.serviceCharge || 0}
+        serviceCharge={serviceCharge}
       />
     </div>
   )

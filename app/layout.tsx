@@ -22,30 +22,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "مطعم ومطبخ مهران | Mehran Kitchen & Restaurant",
-  description:
-    "مطعم مهران - أشهى المأكولات العربية والفلسطينية التراثية. تجربة طعام فاخرة مع منيو رقمي احترافي. Mehran Restaurant - The finest Arabic and Palestinian cuisine.",
-  keywords: ["مطعم", "مهران", "فلسطيني", "عربي", "منيو", "طعام", "مأكولات تراثية", "مطبخ عربي", "restaurant", "menu"],
-  authors: [{ name: "Mehran Kitchen & Restaurant" }],
-  creator: "Mehran Kitchen & Restaurant",
+  description: "أشهى المأكولات العربية والفلسطينية التراثية.",
   icons: {
     icon: "/images/305574365-476836291159139-6829281272340201855-n.png",
-    apple: "/images/305574365-476836291159139-6829281272340201855-n.png",
   },
-  openGraph: {
-    title: "مطعم ومطبخ مهران | Mehran Kitchen & Restaurant",
-    description: "أشهى المأكولات العربية والفلسطينية التراثية",
-    type: "website",
-    locale: "ar_PS",
-  },
-    generator: 'v0.app'
 }
 
 export const viewport: Viewport = {
   themeColor: "#0c0a09",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
-  userScalable: true,
 }
 
 export default function RootLayout({
@@ -55,9 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" className="scroll-smooth">
-      <body
-        className={`${tajawal.className} ${amiri.variable} ${geistMono.variable} font-sans antialiased bg-mehran-dark text-foreground`}
-      >
+      <body className={`${tajawal.className} ${amiri.variable} ${geistMono.variable} font-sans antialiased bg-[#0c0a09] text-white`}>
         {children}
       </body>
     </html>
