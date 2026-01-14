@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState } from "react"
 import { ref, onValue, push, update, remove } from "firebase/database"
 import { database } from "@/lib/firebase"
@@ -20,6 +19,7 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import { Plus, Pencil, Trash2, GripVertical, Loader2 } from "lucide-react"
 import type { Category } from "@/types/menu"
@@ -74,11 +74,11 @@ export default function CategoriesPage() {
   const openEditDialog = (category: Category) => {
     setEditingCategory(category)
     setFormData({
-      nameAr: category.nameAr,
-      nameEn: category.nameEn,
+      nameAr: category.nameAr || "",
+      nameEn: category.nameEn || "",
       image: category.image || "",
-      isActive: category.isActive,
-      order: category.order,
+      isActive: category.isActive ?? true,
+      order: category.order || 0,
     })
     setIsDialogOpen(true)
   }
@@ -89,11 +89,15 @@ export default function CategoriesPage() {
       setIsSaving(true)
       try {
         const imageUrl = await uploadImage(file)
-        setFormData((prev) => ({ ...prev, image: imageUrl }))
+        if (imageUrl) {
+          setFormData((prev) => ({ ...prev, image: imageUrl }))
+        }
       } catch (error) {
         console.error("Error uploading image:", error)
+        alert("فشل رفع الصورة. تأكد من إعدادات Cloudinary")
+      } finally {
+        setIsSaving(false)
       }
-      setIsSaving(false)
     }
   }
 
@@ -102,25 +106,29 @@ export default function CategoriesPage() {
     setIsSaving(true)
 
     try {
-      const categoriesRef = ref(database, "categories")
+      // حماية: نضمن أن القيم ليست undefined قبل الإرسال لـ Firebase
+      const cleanData = {
+        nameAr: formData.nameAr || "",
+        nameEn: formData.nameEn || "",
+        image: formData.image || "",
+        isActive: formData.isActive,
+        order: formData.order ?? categories.length,
+      }
 
       if (editingCategory) {
-        const categoryRef = ref(database, `categories/${editingCategory.id}`)
-        await update(categoryRef, formData)
+        await update(ref(database, `categories/${editingCategory.id}`), cleanData)
       } else {
-        await push(categoriesRef, {
-          ...formData,
-          order: categories.length,
-        })
+        await push(ref(database, "categories"), cleanData)
       }
 
       setIsDialogOpen(false)
       resetForm()
     } catch (error) {
       console.error("Error saving category:", error)
+      alert("حدث خطأ أثناء الحفظ")
+    } finally {
+      setIsSaving(false)
     }
-
-    setIsSaving(false)
   }
 
   const handleDelete = async (categoryId: string) => {
@@ -148,7 +156,6 @@ export default function CategoriesPage() {
       <AdminHeader user={user} title="إدارة الأقسام" />
 
       <div className="p-6">
-        {/* Add Button */}
         <div className="flex justify-between items-center mb-6">
           <p className="text-gray-400">إدارة أقسام المنيو</p>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -161,6 +168,7 @@ export default function CategoriesPage() {
             <DialogContent className="bg-mehran-dark-light border-mehran-gold/20 text-white" dir="rtl">
               <DialogHeader>
                 <DialogTitle>{editingCategory ? "تعديل القسم" : "إضافة قسم جديد"}</DialogTitle>
+                <DialogDescription className="text-gray-400">أضف أو عدل بيانات القسم هنا.</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -191,9 +199,9 @@ export default function CategoriesPage() {
                   />
                   {formData.image && (
                     <img
-                      src={formData.image || "/placeholder.svg"}
+                      src={formData.image}
                       alt="Preview"
-                      className="w-20 h-20 object-cover rounded-lg mt-2"
+                      className="w-20 h-20 object-cover rounded-lg mt-2 border border-mehran-gold/30"
                     />
                   )}
                 </div>
@@ -206,16 +214,12 @@ export default function CategoriesPage() {
                 </div>
                 <DialogFooter className="gap-2">
                   <DialogClose asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="border-mehran-gold/20 text-gray-300 bg-transparent"
-                    >
+                    <Button type="button" variant="outline" className="border-mehran-gold/20 text-gray-300">
                       إلغاء
                     </Button>
                   </DialogClose>
                   <Button type="submit" className="bg-mehran-gold text-mehran-dark" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="animate-spin" size={18} /> : editingCategory ? "حفظ" : "إضافة"}
+                    {isSaving ? <Loader2 className="animate-spin" size={18} /> : (editingCategory ? "حفظ" : "إضافة")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -223,54 +227,29 @@ export default function CategoriesPage() {
           </Dialog>
         </div>
 
-        {/* Categories List */}
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 text-mehran-gold animate-spin" />
           </div>
-        ) : categories.length === 0 ? (
-          <Card className="bg-mehran-dark-light border-mehran-gold/20">
-            <CardContent className="py-12 text-center">
-              <p className="text-gray-400">لا توجد أقسام بعد. أضف قسمك الأول!</p>
-            </CardContent>
-          </Card>
         ) : (
           <div className="space-y-3">
             {categories.map((category) => (
               <Card key={category.id} className="bg-mehran-dark-light border-mehran-gold/20">
                 <CardContent className="p-4 flex items-center gap-4">
                   <GripVertical className="text-gray-500 cursor-grab" size={20} />
-
                   {category.image && (
-                    <img
-                      src={category.image || "/placeholder.svg"}
-                      alt={category.nameAr}
-                      className="w-12 h-12 object-cover rounded-lg"
-                    />
+                    <img src={category.image} alt={category.nameAr} className="w-12 h-12 object-cover rounded-lg" />
                   )}
-
                   <div className="flex-1">
                     <h3 className="font-bold text-white">{category.nameAr}</h3>
                     <p className="text-sm text-gray-400">{category.nameEn}</p>
                   </div>
-
                   <Switch checked={category.isActive} onCheckedChange={() => toggleActive(category)} />
-
                   <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEditDialog(category)}
-                      className="text-mehran-gold hover:bg-mehran-gold/10"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(category)} className="text-mehran-gold">
                       <Pencil size={18} />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(category.id)}
-                      className="text-red-400 hover:bg-red-400/10"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(category.id)} className="text-red-400">
                       <Trash2 size={18} />
                     </Button>
                   </div>
@@ -282,4 +261,4 @@ export default function CategoriesPage() {
       </div>
     </div>
   )
-}
+}git add .
