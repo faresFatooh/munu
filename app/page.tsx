@@ -33,8 +33,10 @@ export default function MenuPage() {
     )
   }
 
-  const serviceCharge = settings?.serviceCharge || 0
-  const finalTotal = cart.totalPrice + (cart.totalPrice * serviceCharge) / 100
+  // تحويل القيم لأرقام لضمان عدم ظهور NaN
+  const serviceCharge = Number(settings?.serviceCharge) || 0
+  const subtotal = Number(cart.totalPrice) || 0
+  const finalTotal = subtotal + (subtotal * serviceCharge) / 100
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white" dir="rtl">
@@ -80,10 +82,11 @@ export default function MenuPage() {
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
         savedItems={cart.savedItems}
-        onRemove={cart.removeItem}
-        onUpdateQuantity={cart.updateQuantity}
-        onClearAll={cart.clearAll}
+        totalPrice={subtotal}
         serviceCharge={serviceCharge}
+        onUpdateQuantity={cart.updateQuantity}
+        onRemoveItem={cart.removeItem}
+        onClearAll={cart.clearAll}
       />
     </div>
   )
