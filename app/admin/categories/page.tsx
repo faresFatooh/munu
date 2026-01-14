@@ -261,4 +261,4 @@ export default function CategoriesPage() {
       </div>
     </div>
   )
-}git add .
+}
