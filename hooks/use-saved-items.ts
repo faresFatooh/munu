@@ -8,7 +8,6 @@ const STORAGE_KEY = "mehran_saved_items"
 export function useSavedItems() {
   const [savedItems, setSavedItems] = useState<SavedItem[]>([])
 
-  // تحميل البيانات عند تشغيل المتصفح فقط
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -22,7 +21,6 @@ export function useSavedItems() {
     }
   }, [])
 
-  // دالة الحفظ
   const saveToStorage = useCallback((items: SavedItem[]) => {
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
@@ -32,12 +30,10 @@ export function useSavedItems() {
   const addItem = useCallback(
     (item: MenuItem, selectedPrice: PriceOption, quantity: number = 1) => {
       if (!item || !selectedPrice) return;
-
       setSavedItems((prev) => {
         const existingIndex = prev.findIndex(
           (s) => s.item.id === item.id && s.selectedPrice.label === selectedPrice.label
         )
-
         let newItems
         if (existingIndex >= 0) {
           newItems = [...prev]
@@ -48,7 +44,6 @@ export function useSavedItems() {
         } else {
           newItems = [...prev, { item, selectedPrice, quantity: (quantity || 1) }]
         }
-
         saveToStorage(newItems)
         return newItems
       })
@@ -91,18 +86,22 @@ export function useSavedItems() {
     }
   }, [])
 
-  // حسابات آمنة لضمان عدم وجود NaN
+  // دالة التحقق من وجود الصنف في السلة
+  const isSaved = useCallback((itemId: string, priceLabel: string) => {
+    return savedItems.some(s => s.item.id === itemId && s.selectedPrice.label === priceLabel)
+  }, [savedItems])
+
   const totalPrice = (savedItems || []).reduce((sum, item) => sum + (item.selectedPrice?.price || 0) * (item.quantity || 0), 0)
   const totalItems = (savedItems || []).reduce((sum, item) => sum + (item.quantity || 0), 0)
 
-  // إرجاع القيم
   return {
-    savedItems: savedItems || [],
+    savedItems,
     addItem,
     removeItem,
     updateQuantity,
     clearAll,
-    totalPrice: totalPrice || 0,
-    totalItems: totalItems || 0,
+    isSaved, // أضفنا هذه الدالة هنا
+    totalPrice,
+    totalItems,
   }
 }
