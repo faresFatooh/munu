@@ -6,34 +6,36 @@ import type { SavedItem, MenuItem, PriceOption } from "@/types/menu"
 const STORAGE_KEY = "mehran_saved_items"
 
 export function useSavedItems() {
-  // 1. تعريف الحالة مع قيمة افتراضية فارغة
   const [savedItems, setSavedItems] = useState<SavedItem[]>([])
 
-  // 2. تحميل البيانات من التخزين المحلي عند تشغيل الصفحة فقط
+  // تحميل البيانات عند تشغيل المتصفح فقط
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        setSavedItems(JSON.parse(stored))
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY)
+        if (stored) {
+          setSavedItems(JSON.parse(stored))
+        }
+      } catch (error) {
+        console.error("Cart error:", error)
       }
-    } catch (error) {
-      console.error("Error loading cart:", error)
     }
   }, [])
 
-  // 3. دالة الحفظ مع التحقق من وجود المتصفح (Window)
+  // دالة الحفظ
   const saveToStorage = useCallback((items: SavedItem[]) => {
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-      setSavedItems([...items]) // استخدام Spread لضمان تحديث الـ State
     }
   }, [])
 
   const addItem = useCallback(
     (item: MenuItem, selectedPrice: PriceOption, quantity: number = 1) => {
+      if (!item || !selectedPrice) return;
+
       setSavedItems((prev) => {
         const existingIndex = prev.findIndex(
-          (s) => s.item.id === item.id && s.selectedPrice.label === selectedPrice.label,
+          (s) => s.item.id === item.id && s.selectedPrice.label === selectedPrice.label
         )
 
         let newItems
@@ -41,17 +43,17 @@ export function useSavedItems() {
           newItems = [...prev]
           newItems[existingIndex] = {
             ...newItems[existingIndex],
-            quantity: newItems[existingIndex].quantity + quantity
+            quantity: (newItems[existingIndex].quantity || 0) + (quantity || 1),
           }
         } else {
-          newItems = [...prev, { item, selectedPrice, quantity }]
+          newItems = [...prev, { item, selectedPrice, quantity: (quantity || 1) }]
         }
 
         saveToStorage(newItems)
         return newItems
       })
     },
-    [saveToStorage],
+    [saveToStorage]
   )
 
   const removeItem = useCallback(
@@ -62,7 +64,7 @@ export function useSavedItems() {
         return newItems
       })
     },
-    [saveToStorage],
+    [saveToStorage]
   )
 
   const updateQuantity = useCallback(
@@ -71,16 +73,15 @@ export function useSavedItems() {
         removeItem(itemId, priceLabel)
         return
       }
-
       setSavedItems((prev) => {
         const newItems = prev.map((s) =>
-          s.item.id === itemId && s.selectedPrice.label === priceLabel ? { ...s, quantity } : s,
+          s.item.id === itemId && s.selectedPrice.label === priceLabel ? { ...s, quantity } : s
         )
         saveToStorage(newItems)
         return newItems
       })
     },
-    [removeItem, saveToStorage],
+    [removeItem, saveToStorage]
   )
 
   const clearAll = useCallback(() => {
@@ -90,17 +91,18 @@ export function useSavedItems() {
     }
   }, [])
 
-  // حساب الإجماليات بدقة
-  const totalPrice = savedItems.reduce((sum, item) => sum + (item.selectedPrice?.price || 0) * item.quantity, 0)
-  const totalItems = savedItems.reduce((sum, item) => sum + item.quantity, 0)
+  // حسابات آمنة لضمان عدم وجود NaN
+  const totalPrice = (savedItems || []).reduce((sum, item) => sum + (item.selectedPrice?.price || 0) * (item.quantity || 0), 0)
+  const totalItems = (savedItems || []).reduce((sum, item) => sum + (item.quantity || 0), 0)
 
+  // إرجاع القيم
   return {
-    savedItems,
+    savedItems: savedItems || [],
     addItem,
     removeItem,
     updateQuantity,
     clearAll,
-    totalPrice,
-    totalItems,
+    totalPrice: totalPrice || 0,
+    totalItems: totalItems || 0,
   }
 }
