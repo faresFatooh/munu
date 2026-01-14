@@ -9,30 +9,42 @@ import { CategorySection } from "@/components/menu/category-section"
 import { FloatingCartButton } from "@/components/menu/floating-cart-button"
 import { SavedItemsSheet } from "@/components/menu/saved-items-sheet"
 import type { MenuItem } from "@/types/menu"
-import { Sparkles, UtensilsCrossed, Loader2 } from "lucide-react"
+import { Loader2, UtensilsCrossed } from "lucide-react"
 
 export default function MenuPage() {
-  // 1. إضافة حالة التأكد من أن المكون تم تركيبه في المتصفح
+  // 1. حالة التركيب (Mounting) - أهم سطر لحل مشكلة s is not a function
   const [isMounted, setIsMounted] = useState(false)
   
-  const { categories, menuItems, settings, loading } = useMenuData()
-  const { savedItems, addItem, removeItem, updateQuantity, clearAll, totalPrice, totalItems } = useSavedItems()
+  // 2. جلب البيانات
+  const { categories = [], menuItems = [], settings = {}, loading } = useMenuData()
+  
+  // 3. جلب دوال السلة مع حماية كاملة
+  const savedItemsHook = useSavedItems()
+  const {
+    savedItems = [],
+    addItem = () => {},
+    removeItem = () => {},
+    updateQuantity = () => {},
+    clearAll = () => {},
+    totalPrice = 0,
+    totalItems = 0
+  } = savedItemsHook || {}
+
   const [selectedCategory, setSelectedCategory] = useState<string>("")
   const [isCartOpen, setIsCartOpen] = useState(false)
 
-  // 2. تفعيل الحالة عند التحميل (هذا يمنع خطأ Hydration)
+  // تفعيل الصفحة فور جاهزية المتصفح
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
-  // 3. تأمين الفلترة (إضافة check للتأكد من وجود مصفوفة)
-  const activeCategories = (categories || []).filter((cat) => cat.isActive)
-
+  // تحديد القسم الأول تلقائياً
+  const activeCategories = categories.filter((cat) => cat.isActive)
   useEffect(() => {
-    if (activeCategories.length > 0 && !selectedCategory) {
+    if (isMounted && activeCategories.length > 0 && !selectedCategory) {
       setSelectedCategory(activeCategories[0].id)
     }
-  }, [activeCategories, selectedCategory])
+  }, [isMounted, activeCategories, selectedCategory])
 
   const handleSaveItem = useCallback(
     (item: MenuItem, selectedPrice: { label: string; price: number }, quantity: number) => {
@@ -40,7 +52,7 @@ export default function MenuPage() {
         addItem(item, selectedPrice, quantity)
       }
     },
-    [addItem],
+    [addItem]
   )
 
   const scrollToCategory = useCallback((categoryId: string) => {
@@ -51,35 +63,24 @@ export default function MenuPage() {
     }
   }, [])
 
-  // 4. تعديل شرط التحميل ليشمل isMounted
+  // 4. شاشة التحميل (تمنع ظهور أي خطأ حتى يكتمل التركيب)
   if (!isMounted || loading) {
     return (
-      <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative flex flex-col items-center">
-             <Loader2 className="w-12 h-12 text-amber-500 animate-spin mb-4" />
-             <p className="text-amber-500 font-medium">جاري تحميل المنيو الفاخر...</p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#0d0d0d] flex flex-col items-center justify-center">
+        <Loader2 className="w-12 h-12 text-amber-500 animate-spin mb-4" />
+        <p className="text-amber-500 font-medium tracking-widest">MEHRAN MENU</p>
       </div>
     )
   }
 
+  // 5. حالة عدم وجود بيانات
   if (activeCategories.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-500/10 flex items-center justify-center">
-            <UtensilsCrossed className="w-12 h-12 text-amber-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-3">لا يوجد منيو متاح حالياً</h2>
-          <p className="text-gray-400 mb-6">يرجى إضافة الأقسام والأصناف من لوحة التحكم لعرض المنيو للزبائن</p>
-          <a
-            href="/admin"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-full hover:from-amber-400 hover:to-amber-500 transition-all"
-          >
-            الذهاب للوحة التحكم
-          </a>
+      <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center p-6 text-center">
+        <div>
+          <UtensilsCrossed className="w-16 h-16 text-amber-500/20 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">المنيو غير متوفر حالياً</h2>
+          <p className="text-gray-400">يرجى مراجعة الإدارة أو المحاولة لاحقاً</p>
         </div>
       </div>
     )
@@ -89,47 +90,53 @@ export default function MenuPage() {
   const finalTotal = totalPrice + (totalPrice * serviceCharge) / 100
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d]" dir="rtl">
-      {/* ... باقي الكود التصميمي الخاص بك كما هو تماماً ... */}
-      <div className="relative z-10">
-        <MenuHeader settings={settings} />
+    <div className="min-h-screen bg-[#0d0d0d] text-white selection:bg-amber-500/30" dir="rtl">
+      <MenuHeader settings={settings} />
 
-        <div className="sticky top-0 z-40 bg-[#0d0d0d]/95 backdrop-blur-xl border-b border-amber-500/10">
-          <CategoryTabs
-            categories={activeCategories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={scrollToCategory}
-          />
-        </div>
-
-        <main className="max-w-7xl mx-auto px-4 py-8">
-          {activeCategories.map((category) => {
-            const categoryItems = (menuItems || []).filter((item) => item.categoryId === category.id && item.isAvailable)
-            if (categoryItems.length === 0) return null
-            return (
-              <CategorySection
-                key={category.id}
-                category={category}
-                items={categoryItems}
-                onSaveItem={handleSaveItem}
-              />
-            )
-          })}
-        </main>
-        
-        {/* ... بقية الـ Footer والـ Floating Button ... */}
-        <FloatingCartButton totalItems={totalItems} totalPrice={finalTotal} onClick={() => setIsCartOpen(true)} />
-
-        <SavedItemsSheet
-          isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          savedItems={savedItems}
-          onRemove={removeItem}
-          onUpdateQuantity={updateQuantity}
-          onClearAll={clearAll}
-          serviceCharge={serviceCharge}
+      <div className="sticky top-0 z-40 bg-[#0d0d0d]/90 backdrop-blur-md border-b border-white/5">
+        <CategoryTabs
+          categories={activeCategories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={scrollToCategory}
         />
       </div>
+
+      <main className="max-w-7xl mx-auto px-4 py-8 pb-32">
+        {activeCategories.map((category) => {
+          const categoryItems = menuItems.filter(
+            (item) => item.categoryId === category.id && item.isAvailable
+          )
+          if (categoryItems.length === 0) return null
+          return (
+            <CategorySection
+              key={category.id}
+              category={category}
+              items={categoryItems}
+              onSaveItem={handleSaveItem}
+            />
+          )
+        })}
+      </main>
+
+      {/* أزرار السلة تظهر فقط إذا كانت الدوال جاهزة */}
+      {isMounted && (
+        <>
+          <FloatingCartButton 
+            totalItems={totalItems} 
+            totalPrice={finalTotal} 
+            onClick={() => setIsCartOpen(true)} 
+          />
+          <SavedItemsSheet
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            savedItems={savedItems}
+            onRemove={removeItem}
+            onUpdateQuantity={updateQuantity}
+            onClearAll={clearAll}
+            serviceCharge={serviceCharge}
+          />
+        </>
+      )}
     </div>
   )
 }
