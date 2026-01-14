@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Tajawal, Amiri, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
 const tajawal = Tajawal({
@@ -60,7 +59,6 @@ export default function RootLayout({
         className={`${tajawal.className} ${amiri.variable} ${geistMono.variable} font-sans antialiased bg-mehran-dark text-foreground`}
       >
         {children}
-        <Analytics />
       </body>
     </html>
   )
